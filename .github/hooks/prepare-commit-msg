@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+# Archivo: prepare-commit-msg
+# Función: Inyecta el nombre de la rama y valida el formato Conventional Commit.
+# Este script es ejecutado por Husky.
+
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="$2"
+
+# 1. EVITAR EJECUCIÓN EN COMMITS AUTOMÁTICOS (MERGE, SQUASH, ETC.)
+if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ]; then
+    exit 0
+fi
+
+# 2. OBTENER INFORMACIÓN DE LA RAMA
+# Obtener nombre de la rama actual (ej: feat/123-login)
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+
+# 3. VALIDACIÓN DE CONVENTIONAL COMMIT (Tipo y Longitud)
+# Extraer el 'tipo' de commit (ej: feat, fix, chore)
+TYPE=$(echo "$BRANCH_NAME" | cut -d'/' -f1)
+
+# Lista de tipos válidos para Conventional Commits
+VALID_TYPES="feat|fix|chore|docs|style|refactor|perf|test|ci|build|revert"
+if ! echo "$TYPE" | grep -Eq "^($VALID_TYPES)$"; then
+	echo "❌ ERROR: El tipo de commit '$TYPE' extraído de la rama NO es válido." >&2
+	echo "👉 El formato de rama debe ser: [tipo]/[issue]-[descripción]" >&2
+	echo "👉 Tipos válidos: $VALID_TYPES" >&2
+	exit 1
+fi
+
+# Extraer el número de issue si existe
+ISSUE=$(echo "$BRANCH_NAME" | grep -oE '^[a-zA-Z]+/([0-9]+)' | cut -d'/' -f2)
+
+# Extraer el 'scope' para el título
+SCOPE=$(echo "$BRANCH_NAME" | cut -d'/' -f2- | sed -E 's/^[0-9]+-//' | cut -d'-' -f1)
+
+# Leer mensaje original
+ORIGINAL_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Construir el título final (ej: feat(login): mensaje original)
+NEW_TITLE="${TYPE}(${SCOPE}): ${ORIGINAL_MSG}"
+
+# Validar longitud del título (Máx. 72 caracteres en la primera línea)
+TITLE_LENGTH=$(echo "$NEW_TITLE" | awk '{print length($0)}')
+
+if [ "$TITLE_LENGTH" -gt 72 ]; then
+	echo "❌ ERROR: El título excede los 72 caracteres. Es muy largo." >&2
+	echo "Título generado: $NEW_TITLE" >&2
+	exit 1
+fi
+
+# 4. SOBRESCRIBIR EL MENSAJE (INYECCIÓN AUTOMÁTICA)
+# Usamos paréntesis para una subshell robusta y forzamos la sobrescritura.
+(
+    echo "$NEW_TITLE"
+    echo # Línea vacía
+    echo "Branch: $BRANCH_NAME" # Comentario automático
+    if [ -n "$ISSUE" ]; then 
+        echo "Fixes: #$ISSUE" # Enlaza automáticamente al Issue
+    fi
+) > "$COMMIT_MSG_FILE"
+
+exit 0
