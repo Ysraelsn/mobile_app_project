@@ -1,0 +1,1 @@
+sh .github/hooks/prepare-commit-msg $1 $2
