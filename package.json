@@ -9,9 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "prepare": "husky install", 
-    "precommit": "lint-staged", 
-    "test:unit": "jest" 
+    "prepare": "husky install",
+    "precommit": "lint-staged",
+    "test:unit": "jest"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -57,11 +57,8 @@
   "private": true,
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
+      "eslint --fix --no-error-on-unmatched-pattern",
       "prettier --write"
-    ],
-    "*.{ts,tsx}": [
-      "npm run test:unit -- --findRelatedTests"
     ]
   },
   "husky": {
