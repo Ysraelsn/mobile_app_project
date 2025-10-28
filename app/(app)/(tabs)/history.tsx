@@ -1,6 +1,14 @@
+import { useAuth } from "@/hooks/useAuth";
+import { Redirect } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function TabHistoryScreen() {
+  const { isLoggedIn } = useAuth();
+
+  if (!isLoggedIn) {
+    return <Redirect href={"/(auth)/login"} />;
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Pantalla del Historial</Text>
