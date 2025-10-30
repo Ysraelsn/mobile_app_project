@@ -1,10 +1,15 @@
 {
   "expo": {
-    "name": "mobile_app_project",
-    "slug": "mobile_app_project",
+    "name": "BeeOnTime",
+    "slug": "BeeOnTime",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E3A542"
+    },
     "scheme": "mobileappproject",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -19,7 +24,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.ysraelsn.BeeOnTime"
     },
     "web": {
       "output": "static",
@@ -30,9 +36,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
+          "image": "./assets/images/splash.png",
+          "resizeMode": "cover",
           "backgroundColor": "#ffffff",
           "dark": {
             "backgroundColor": "#000000"
