@@ -1,4 +1,4 @@
-import { Camera } from "expo-camera";
+import { Camera, CameraView } from "expo-camera";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -19,7 +19,8 @@ export default function TabScannerScreen() {
     try {
       const { status } = await Camera.requestCameraPermissionsAsync();
       setPermission(status === "granted" ? "granted" : "denied");
-    } catch (e) {
+    } catch {
+      // ✅ SOLUCIÓN: Captura el error sin declararlo, eliminando la advertencia.
       setPermission("denied");
     } finally {
       setLoading(false);
@@ -30,15 +31,17 @@ export default function TabScannerScreen() {
     requestPermission();
   }, []);
 
+  // 1. Vista de Carga
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#E3A542" />
         <Text style={styles.info}>Solicitando permisos de cámara...</Text>
       </View>
     );
   }
 
+  // 2. Vista de Permiso Denegado
   if (permission === "denied") {
     return (
       <View style={styles.container}>
@@ -47,17 +50,23 @@ export default function TabScannerScreen() {
           Necesitamos acceso a la cámara para escanear códigos. Por favor
           permita el acceso.
         </Text>
-        <Button title="Reintentar" onPress={requestPermission} />
+        <Button
+          title="Reintentar"
+          onPress={requestPermission}
+          color="#cc0000"
+        />
       </View>
     );
   }
 
+  // 3. Vista de Permiso Concedido: Muestra la cámara
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>
-        Permisos Concedidos, listo para la cámara
-      </Text>
-      <Text style={styles.mock}>Aquí iría la vista de la cámara</Text>
+    <View style={styles.cameraContainer}>
+      <CameraView
+        style={StyleSheet.absoluteFillObject}
+        facing="back"
+        // La lógica de escaneo se añade aquí en la siguiente fase (onBarcodeScanned)
+      />
     </View>
   );
 }
@@ -68,17 +77,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
+    backgroundColor: "#fff",
+  },
+  cameraContainer: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: "black",
   },
   title: {
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 12,
-  },
-  mock: {
-    marginTop: 20,
-    height: 1,
-    width: "80%",
-    backgroundColor: "#eee",
   },
   info: {
     marginTop: 12,
