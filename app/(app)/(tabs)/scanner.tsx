@@ -1,5 +1,7 @@
 import { Camera, CameraView } from "expo-camera";
+import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
+
 import {
   ActivityIndicator,
   Button,
@@ -35,6 +37,8 @@ export default function TabScannerScreen() {
   const handleBarcodeScanned = (result: any) => {
     console.log("Código escaneado:", result.data);
     setScannedData(result.data);
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   // 1. Vista de Carga
@@ -77,6 +81,11 @@ export default function TabScannerScreen() {
         }}
         onBarcodeScanned={handleBarcodeScanned}
       />
+
+      <View style={styles.overlayBox}>
+        <View style={styles.laserLine} />
+      </View>
+      <Text style={styles.overlayText}>Apunta al código de barras</Text>
 
       {scannedData && (
         <View style={styles.overlay}>
@@ -127,5 +136,37 @@ const styles = StyleSheet.create({
     color: "#fff",
     padding: 10,
     borderRadius: 8,
+  },
+
+  overlayBox: {
+    position: "absolute",
+    top: "35%", // aproximadamente en el centro
+    left: "10%",
+    width: "80%",
+    height: 150,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.8)",
+    backgroundColor: "rgba(0,0,0,0.2)", // semitransparente
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  laserLine: {
+    position: "absolute",
+    top: "50%", // centro vertical del recuadro
+    width: "100%",
+    height: 2,
+    backgroundColor: "red",
+  },
+
+  overlayText: {
+    position: "absolute",
+    top: "40%", // ajusta según dónde está el recuadro
+    marginTop: 160, // un poco debajo del recuadro de 150px de alto
+    color: "#fff",
+    fontSize: 16,
+    textAlign: "center",
+    width: "100%",
   },
 });
