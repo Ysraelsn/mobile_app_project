@@ -13,6 +13,7 @@ type PermissionState = "unknown" | "granted" | "denied";
 export default function TabScannerScreen() {
   const [permission, setPermission] = useState<PermissionState>("unknown");
   const [loading, setLoading] = useState<boolean>(true);
+  const [scannedData, setScannedData] = useState<string | null>(null);
 
   const requestPermission = async () => {
     setLoading(true);
@@ -30,6 +31,11 @@ export default function TabScannerScreen() {
   useEffect(() => {
     requestPermission();
   }, []);
+
+  const handleBarcodeScanned = (result: any) => {
+    console.log("Código escaneado:", result.data);
+    setScannedData(result.data);
+  };
 
   // 1. Vista de Carga
   if (loading) {
@@ -66,7 +72,17 @@ export default function TabScannerScreen() {
         style={StyleSheet.absoluteFillObject}
         facing="back"
         // La lógica de escaneo se añade aquí en la siguiente fase (onBarcodeScanned)
+        barcodeScannerSettings={{
+          barcodeTypes: ["code128", "ean13"],
+        }}
+        onBarcodeScanned={handleBarcodeScanned}
       />
+
+      {scannedData && (
+        <View style={styles.overlay}>
+          <Text style={styles.resultText}>Empleado: {scannedData}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -97,5 +113,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: "center",
     color: "#cc0000",
+  },
+
+  overlay: {
+    position: "absolute",
+    bottom: 50,
+    width: "100%",
+    alignItems: "center",
+  },
+  resultText: {
+    fontSize: 18,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    color: "#fff",
+    padding: 10,
+    borderRadius: 8,
   },
 });
