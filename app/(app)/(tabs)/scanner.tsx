@@ -1,10 +1,10 @@
 import { Camera, CameraView } from "expo-camera";
-import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
+  Alert,
   Button,
   StyleSheet,
   Text,
@@ -17,6 +17,37 @@ export default function TabScannerScreen() {
   const [permission, setPermission] = useState<PermissionState>("unknown");
   const [loading, setLoading] = useState<boolean>(true);
   const [scannedData, setScannedData] = useState<string | null>(null);
+  const [isScannerActive, setIsScannerActive] = useState(true);
+  const isProcessingRef = useRef(false);
+
+  const handleRegisterAttendance = async (employeeId: string) => {
+    return new Promise<void>((resolve) => {
+      Alert.alert(
+        "Confirmar asistencia",
+        `¿Registrar asistencia para: ${employeeId}?`,
+        [
+          {
+            text: "Cancelar",
+            style: "cancel",
+            onPress: () => {
+              setIsScannerActive(true); // reactivar escáner
+              resolve();
+            },
+          },
+          {
+            text: "Registrar",
+            onPress: () => {
+              console.log("✅ Asistencia confirmada para:", employeeId);
+
+              // 🔜 Aquí se conectará el siguiente issue (guardar en DB)
+              resolve();
+            },
+          },
+        ],
+        { cancelable: false },
+      );
+    });
+  };
 
   const requestPermission = async () => {
     setLoading(true);
@@ -59,11 +90,16 @@ export default function TabScannerScreen() {
     requestNotificationPermission();
   }, []);
 
-  const handleBarcodeScanned = (result: any) => {
-    console.log("Código escaneado:", result.data);
+  const handleBarcodeScanned = async (result: any) => {
+    if (isProcessingRef.current || !isScannerActive) return;
+
+    isProcessingRef.current = true;
+
+    setIsScannerActive(false);
     setScannedData(result.data);
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await handleRegisterAttendance(result.data);
+    isProcessingRef.current = false;
   };
 
   // 1. Vista de Carga
@@ -100,11 +136,10 @@ export default function TabScannerScreen() {
       <CameraView
         style={StyleSheet.absoluteFillObject}
         facing="back"
-        // La lógica de escaneo se añade aquí en la siguiente fase (onBarcodeScanned)
         barcodeScannerSettings={{
           barcodeTypes: ["code128", "ean13"],
         }}
-        onBarcodeScanned={handleBarcodeScanned}
+        onBarcodeScanned={isScannerActive ? handleBarcodeScanned : undefined}
       />
 
       <View style={styles.overlayBox}>
@@ -112,9 +147,17 @@ export default function TabScannerScreen() {
       </View>
       <Text style={styles.overlayText}>Apunta al código de barras</Text>
 
-      {scannedData && (
+      {scannedData && !isScannerActive && (
         <View style={styles.overlay}>
           <Text style={styles.resultText}>Empleado: {scannedData}</Text>
+
+          <Button
+            title="Escanear de nuevo"
+            onPress={() => {
+              setIsScannerActive(true);
+              setScannedData(null);
+            }}
+          />
         </View>
       )}
     </View>
