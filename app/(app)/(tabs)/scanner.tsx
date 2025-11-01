@@ -1,5 +1,6 @@
 import { Camera, CameraView } from "expo-camera";
 import * as Haptics from "expo-haptics";
+import * as Notifications from "expo-notifications";
 import React, { useEffect, useState } from "react";
 
 import {
@@ -32,6 +33,30 @@ export default function TabScannerScreen() {
 
   useEffect(() => {
     requestPermission();
+
+    // Configura el comportamiento de las notificaciones en primer plano
+    Notifications.setNotificationHandler({
+      handleNotification:
+        async (): Promise<Notifications.NotificationBehavior> => {
+          return {
+            shouldShowAlert: true,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            shouldShowBanner: true,
+            shouldShowList: true,
+          };
+        },
+    });
+
+    // Solicita permisos de notificación
+    const requestNotificationPermission = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== "granted") {
+        console.warn("Permisos de notificación no concedidos");
+      }
+    };
+
+    requestNotificationPermission();
   }, []);
 
   const handleBarcodeScanned = (result: any) => {
