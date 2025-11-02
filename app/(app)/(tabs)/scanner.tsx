@@ -1,240 +1,116 @@
-import { Camera, CameraView } from "expo-camera";
-import * as Notifications from "expo-notifications";
 import React, { useEffect, useRef, useState } from "react";
+import { Alert } from "react-native";
 
-import {
-  ActivityIndicator,
-  Alert,
-  Button,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+// Importa los nuevos hooks
+import { useAttendance } from "../../../hooks/useAttendance";
+import { useScannerPermissions } from "../../../hooks/useScannerPermissions";
 
-type PermissionState = "unknown" | "granted" | "denied";
+// Importa los nuevos componentes de UI
+import { ScannerCameraView } from "../../../components/scanner/ScannerCameraView";
+import { ScannerLoadingView } from "../../../components/scanner/ScannerLoadingView";
+import { ScannerPermissionView } from "../../../components/scanner/ScannerPermissionView";
 
 export default function TabScannerScreen() {
-  const [permission, setPermission] = useState<PermissionState>("unknown");
-  const [loading, setLoading] = useState<boolean>(true);
+  // Estado local de la UI
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [isScannerActive, setIsScannerActive] = useState(true);
   const isProcessingRef = useRef(false);
 
-  const handleRegisterAttendance = async (employeeId: string) => {
-    return new Promise<void>((resolve) => {
-      Alert.alert(
-        "Confirmar asistencia",
-        `¿Registrar asistencia para: ${employeeId}?`,
-        [
-          {
-            text: "Cancelar",
-            style: "cancel",
-            onPress: () => {
-              setIsScannerActive(true); // reactivar escáner
-              resolve();
-            },
-          },
-          {
-            text: "Registrar",
-            onPress: () => {
-              console.log("✅ Asistencia confirmada para:", employeeId);
+  // Lógica de permisos (del hook)
+  const {
+    permission,
+    loading: permissionLoading,
+    requestCameraPermission,
+  } = useScannerPermissions();
 
-              // 🔜 Aquí se conectará el siguiente issue (guardar en DB)
-              resolve();
-            },
-          },
-        ],
-        { cancelable: false },
-      );
-    });
-  };
+  // Lógica de negocio (del hook)
+  const {
+    registerAttendance,
+    isLoading: isRegistering,
+    error: registrationError,
+    successData,
+    reset: resetAttendanceState,
+  } = useAttendance();
 
-  const requestPermission = async () => {
-    setLoading(true);
-    try {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setPermission(status === "granted" ? "granted" : "denied");
-    } catch {
-      // ✅ SOLUCIÓN: Captura el error sin declararlo, eliminando la advertencia.
-      setPermission("denied");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Efecto para mostrar Alertas de éxito
   useEffect(() => {
-    requestPermission();
+    if (successData) {
+      Alert.alert(
+        "✅ Asistencia registrada",
+        `Empleado: ${successData.employeeName}`,
+      );
+      resetAttendanceState();
+    }
+  }, [successData, resetAttendanceState]);
 
-    // Configura el comportamiento de las notificaciones en primer plano
-    Notifications.setNotificationHandler({
-      handleNotification:
-        async (): Promise<Notifications.NotificationBehavior> => {
-          return {
-            shouldShowAlert: true,
-            shouldPlaySound: false,
-            shouldSetBadge: false,
-            shouldShowBanner: true,
-            shouldShowList: true,
-          };
-        },
-    });
+  // Efecto para mostrar Alertas de error
+  useEffect(() => {
+    if (registrationError) {
+      Alert.alert("Error", registrationError.message);
+      resetAttendanceState();
+    }
+  }, [registrationError, resetAttendanceState]);
 
-    // Solicita permisos de notificación
-    const requestNotificationPermission = async () => {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== "granted") {
-        console.warn("Permisos de notificación no concedidos");
-      }
-    };
-
-    requestNotificationPermission();
-  }, []);
+  // --- Handlers ---
 
   const handleBarcodeScanned = async (result: any) => {
     if (isProcessingRef.current || !isScannerActive) return;
 
     isProcessingRef.current = true;
-
     setIsScannerActive(false);
     setScannedData(result.data);
 
-    await handleRegisterAttendance(result.data);
+    // Muestra una Alerta de confirmación
+    Alert.alert(
+      "Confirmar asistencia",
+      `¿Registrar asistencia para: ${result.data}?`,
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+          onPress: () => handleRescan(), // Llama a re-escanear
+        },
+        {
+          text: "Registrar",
+          onPress: async () => {
+            await registerAttendance(result.data);
+            isProcessingRef.current = false;
+          },
+        },
+      ],
+      { cancelable: false },
+    );
+  };
+
+  const handleRescan = () => {
+    setIsScannerActive(true);
+    setScannedData(null);
     isProcessingRef.current = false;
   };
 
-  // 1. Vista de Carga
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#E3A542" />
-        <Text style={styles.info}>Solicitando permisos de cámara...</Text>
-      </View>
-    );
+  // --- Render Logic ---
+
+  // 1. Vista de Carga (permisos o registro)
+  if (permissionLoading) {
+    return <ScannerLoadingView text="Solicitando permisos de cámara..." />;
+  }
+
+  if (isRegistering) {
+    return <ScannerLoadingView text="Registrando asistencia..." />;
   }
 
   // 2. Vista de Permiso Denegado
   if (permission === "denied") {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Permiso de cámara denegado</Text>
-        <Text style={styles.error}>
-          Necesitamos acceso a la cámara para escanear códigos. Por favor
-          permita el acceso.
-        </Text>
-        <Button
-          title="Reintentar"
-          onPress={requestPermission}
-          color="#cc0000"
-        />
-      </View>
-    );
+    return <ScannerPermissionView onRetry={requestCameraPermission} />;
   }
 
   // 3. Vista de Permiso Concedido: Muestra la cámara
   return (
-    <View style={styles.cameraContainer}>
-      <CameraView
-        style={StyleSheet.absoluteFillObject}
-        facing="back"
-        barcodeScannerSettings={{
-          barcodeTypes: ["code128", "ean13"],
-        }}
-        onBarcodeScanned={isScannerActive ? handleBarcodeScanned : undefined}
-      />
-
-      <View style={styles.overlayBox}>
-        <View style={styles.laserLine} />
-      </View>
-      <Text style={styles.overlayText}>Apunta al código de barras</Text>
-
-      {scannedData && !isScannerActive && (
-        <View style={styles.overlay}>
-          <Text style={styles.resultText}>Empleado: {scannedData}</Text>
-
-          <Button
-            title="Escanear de nuevo"
-            onPress={() => {
-              setIsScannerActive(true);
-              setScannedData(null);
-            }}
-          />
-        </View>
-      )}
-    </View>
+    <ScannerCameraView
+      isScannerActive={isScannerActive}
+      scannedData={scannedData}
+      onBarcodeScanned={handleBarcodeScanned}
+      onRescan={handleRescan}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    backgroundColor: "#fff",
-  },
-  cameraContainer: {
-    flex: 1,
-    width: "100%",
-    backgroundColor: "black",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 12,
-  },
-  info: {
-    marginTop: 12,
-    fontSize: 16,
-  },
-  error: {
-    marginBottom: 16,
-    textAlign: "center",
-    color: "#cc0000",
-  },
-
-  overlay: {
-    position: "absolute",
-    bottom: 50,
-    width: "100%",
-    alignItems: "center",
-  },
-  resultText: {
-    fontSize: 18,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    color: "#fff",
-    padding: 10,
-    borderRadius: 8,
-  },
-
-  overlayBox: {
-    position: "absolute",
-    top: "35%", // aproximadamente en el centro
-    left: "10%",
-    width: "80%",
-    height: 150,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.8)",
-    backgroundColor: "rgba(0,0,0,0.2)", // semitransparente
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  laserLine: {
-    position: "absolute",
-    top: "50%", // centro vertical del recuadro
-    width: "100%",
-    height: 2,
-    backgroundColor: "red",
-  },
-
-  overlayText: {
-    position: "absolute",
-    top: "40%", // ajusta según dónde está el recuadro
-    marginTop: 160, // un poco debajo del recuadro de 150px de alto
-    color: "#fff",
-    fontSize: 16,
-    textAlign: "center",
-    width: "100%",
-  },
-});
