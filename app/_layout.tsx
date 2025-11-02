@@ -3,7 +3,18 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { store } from "@/store";
+import * as Notifications from "expo-notifications";
 import { Provider } from "react-redux";
+
+//Configuración para manejar las notificaciones mientras la app está abierta
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export const unstable_settings = {
   anchor: "(tabs)",
