@@ -10,6 +10,8 @@ import { ScannerCameraView } from "../../../components/scanner/ScannerCameraView
 import { ScannerLoadingView } from "../../../components/scanner/ScannerLoadingView";
 import { ScannerPermissionView } from "../../../components/scanner/ScannerPermissionView";
 
+import * as notificationService from "../../../services/notificationService";
+
 export default function TabScannerScreen() {
   // Estado local de la UI
   const [scannedData, setScannedData] = useState<string | null>(null);
@@ -32,10 +34,10 @@ export default function TabScannerScreen() {
     reset: resetAttendanceState,
   } = useAttendance();
 
-  // Efecto para mostrar Alertas de éxito
+  // Notificaciones push
   useEffect(() => {
     if (successData) {
-      Alert.alert(
+      notificationService.schedulePushNotification(
         "✅ Asistencia registrada",
         `Empleado: ${successData.employeeName}`,
       );
