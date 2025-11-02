@@ -1,6 +1,8 @@
 import { Camera, CameraView } from "expo-camera";
 import * as Notifications from "expo-notifications";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import React, { useEffect, useRef, useState } from "react";
+import { firebaseDB } from "../../../firebase/config";
 
 import {
   ActivityIndicator,
@@ -36,11 +38,25 @@ export default function TabScannerScreen() {
           },
           {
             text: "Registrar",
-            onPress: () => {
-              console.log("✅ Asistencia confirmada para:", employeeId);
+            onPress: async () => {
+              try {
+                await addDoc(collection(firebaseDB, "attendance"), {
+                  employeeId,
+                  timestamp: serverTimestamp(),
+                });
 
-              // 🔜 Aquí se conectará el siguiente issue (guardar en DB)
-              resolve();
+                Alert.alert("Listo", "Asistencia registrada correctamente.");
+              } catch (error) {
+                console.error("Error guardando asistencia:", error);
+                Alert.alert(
+                  "Error",
+                  "No se pudo guardar la asistencia. Intentá de nuevo.",
+                );
+              } finally {
+                setIsScannerActive(true);
+                setScannedData(null);
+                resolve();
+              }
             },
           },
         ],
