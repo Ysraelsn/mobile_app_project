@@ -6,12 +6,13 @@ import { getFirestore } from "firebase/firestore";
 
 // Initialize Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyAyK5T4IDeDbzW66UJpAnhnaTUT2TqCQJg",
-  authDomain: "bee-on-time-67e0b.firebaseapp.com",
-  projectId: "bee-on-time-67e0b",
-  storageBucket: "bee-on-time-67e0b.firebasestorage.app",
-  messagingSenderId: "242879760001",
-  appId: "1:242879760001:web:f88250832b426a624f2f80",
+  apiKey: "AIzaSyBdzB8GfYy3e6Zhgsz_k1789GgzP8dtvIs",
+  authDomain: "beeontime-81605.firebaseapp.com",
+  projectId: "beeontime-81605",
+  storageBucket: "beeontime-81605.firebasestorage.app",
+  messagingSenderId: "46329225461",
+  appId: "1:46329225461:web:51fc823acbaae6173be5bc",
+  measurementId: "G-ML2G9CKH3M",
 };
 
 export const firebaseApp = initializeApp(firebaseConfig);
