@@ -9,32 +9,10 @@ import {
   View,
 } from "react-native";
 
-import {
-  AttendanceRecord,
-  useAttendanceHistory,
-} from "@/hooks/useAttendanceHistory";
+import { useAttendanceHistory } from "@/hooks/useAttendanceHistory";
 
+import { AttendanceItem } from "@/components/attendance/AttendanceItem";
 import { logoutUser } from "@/services/auth.service";
-import { Redirect } from "expo-router";
-
-/**
- * Componente para renderizar cada item de la lista
- */
-const AttendanceItem = ({ item }: { item: AttendanceRecord }) => {
-  // Formateo de Timestamp para legibilidad
-  const formattedDate = item.timestamp
-    ? new Date(item.timestamp.seconds * 1000).toLocaleString("es-MX")
-    : "Fecha no disponible";
-
-  return (
-    <View style={styles.itemContainer}>
-      <Text style={styles.itemTitle}>{item.employeeName}</Text>
-      <Text style={styles.itemSubtitle}>ID: {item.employeeId}</Text>
-
-      <Text style={styles.itemTimestamp}>{formattedDate}</Text>
-    </View>
-  );
-};
 
 export default function TabHistoryScreen() {
   const { isLoggedIn } = useAuth();
@@ -50,9 +28,9 @@ export default function TabHistoryScreen() {
   };
 
   // Verifica si el usuario está autenticado
-  if (!isLoggedIn) {
-    return <Redirect href={"/(auth)/login"} />;
-  }
+  // if (!isLoggedIn) {
+  //   return <Redirect href={"/(auth)/login"} />;
+  // }
 
   // Estado de Carga
   if (isLoading) {
@@ -149,34 +127,6 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
-  },
-  itemContainer: {
-    backgroundColor: "#ffffff",
-    padding: 16,
-    marginVertical: 8,
-    marginHorizontal: 16,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  itemTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  itemSubtitle: {
-    fontSize: 14,
-    color: "#52525b",
-    marginTop: 4,
-  },
-  itemTimestamp: {
-    fontSize: 12,
-    color: "#71717a",
-    marginTop: 8,
-    textAlign: "right",
   },
   logout: {
     display: "flex",
