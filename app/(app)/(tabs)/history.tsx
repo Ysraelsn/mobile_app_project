@@ -2,18 +2,20 @@ import { useAuth } from "@/hooks/useAuth";
 import { Redirect } from "expo-router";
 import {
   collection,
-  getDocs,
   getFirestore,
+  onSnapshot,
   orderBy,
   query,
+  Unsubscribe,
   where,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -26,14 +28,20 @@ interface AttendanceRecord {
 }
 
 export default function TabHistoryScreen() {
-  const { isLoggedIn, userId } = useAuth();
+  const { isLoggedIn, userId, userRole, startLogout } = useAuth() as any;
 
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [screenTitle, setScreenTitle] = useState("Mi Historial de Asistencia");
+
+  const handleLogout = useCallback(() => {
+    startLogout();
+  }, [startLogout]);
+
   // -------------------------------------------------------------------
-  // Lógica de Obtención de Datos (Consulta Única y Directa)
+  // Lógica de Obtención de Datos (onSnapshot Condicional por Rol)
   // -------------------------------------------------------------------
   useEffect(() => {
     if (!isLoggedIn || !userId) {
@@ -41,35 +49,47 @@ export default function TabHistoryScreen() {
       return;
     }
 
-    const fetchHistory = async () => {
-      setIsLoading(true);
-      setError(null);
-      const db = getFirestore();
+    const db = getFirestore();
+    const attendanceCollection = collection(db, "attendance");
+    let historyQuery = query(attendanceCollection);
 
-      try {
-        const historyQuery = query(
-          collection(db, "attendance"),
-          where("userId", "==", userId),
-          orderBy("timestamp", "desc"),
-        );
-        const historySnapshot = await getDocs(historyQuery);
+    if (userRole === "admin") {
+      setScreenTitle("Historial General de Asistencia");
+    } else {
+      setScreenTitle("Mi Historial de Asistencia");
+      historyQuery = query(attendanceCollection, where("userId", "==", userId));
+    }
 
-        const historyData = historySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as AttendanceRecord[];
+    historyQuery = query(historyQuery, orderBy("timestamp", "desc"));
 
-        setAttendance(historyData);
-      } catch (e) {
-        console.error("Error al obtener historial:", e);
-        setError("Error al cargar el historial. Intenta de nuevo.");
-      } finally {
+    const unsubscribe: Unsubscribe = onSnapshot(
+      historyQuery,
+      (snapshot) => {
+        setError(null);
+
+        try {
+          const historyData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as AttendanceRecord[];
+
+          setAttendance(historyData);
+        } catch (e) {
+          console.error("Error en onSnapshot:", e);
+          setError("Error al cargar los datos en tiempo real.");
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      (error) => {
+        console.error("Error en el listener de Firestore:", error);
+        setError("Error de conexión con la base de datos.");
         setIsLoading(false);
-      }
-    };
+      },
+    );
 
-    fetchHistory();
-  }, [isLoggedIn, userId]);
+    return () => unsubscribe();
+  }, [isLoggedIn, userId, userRole]);
   // -------------------------------------------------------------------
 
   if (!isLoggedIn) {
@@ -109,11 +129,15 @@ export default function TabHistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mi Historial de Asistencia</Text>
+      <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+        <Text style={styles.logoutText}>Cerrar Sesión</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.title}>{screenTitle}</Text>
 
       {attendance.length === 0 ? (
         <Text style={styles.mock}>
-          No hay registros de asistencia para tu cuenta.
+          No hay registros de asistencia para mostrar.
         </Text>
       ) : (
         <FlatList
@@ -131,7 +155,7 @@ export default function TabHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: 80,
     alignItems: "center",
     justifyContent: "flex-start",
     backgroundColor: "#fff",
@@ -140,6 +164,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
+  },
+  logoutButton: {
+    position: "absolute",
+    top: 40,
+    right: 20,
+    backgroundColor: "#ff4d4d",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 5,
+    zIndex: 10,
+  },
+  logoutText: {
+    color: "white",
+    fontWeight: "bold",
   },
   list: {
     width: "100%",

@@ -8,6 +8,7 @@ import { clearUser, setUser } from "@/store/user";
 
 export const useAuth = () => {
   const authState = useAppSelector((state) => state.auth);
+  const userState = useAppSelector((state) => state.user);
   const dispatch = useAppDispatch();
 
   const startCheckingAuth = async () => {
@@ -51,9 +52,11 @@ export const useAuth = () => {
     status: authState.status,
     isLoggedIn: authState.isLoggedIn,
     errorMessage: authState.errorMessage,
+    userRole: userState.role,
 
     // Methods
     startCheckingAuth,
     startLogin,
+    startLogout: () => dispatch(logout()),
   };
 };
