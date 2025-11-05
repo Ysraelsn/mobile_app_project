@@ -1,6 +1,7 @@
 import { AttendanceRecord } from "@/hooks/useAttendanceHistory";
+import { Link } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
 // El componente acepta la prop 'item'
 interface Props {
@@ -21,16 +22,19 @@ export const AttendanceItem = ({ item }: Props) => {
     : "Fecha no disponible";
 
   return (
-    <View style={styles.itemContainer}>
-      {/* employeeId de forma destacada */}
-      <Text style={styles.itemTitle}>{item.employeeId}</Text>
-
-      {/* Mostramos el nombre como info secundaria, que es más legible */}
-      <Text style={styles.itemSubtitle}>{item.employeeName}</Text>
-
-      {/* Fecha formateada */}
-      <Text style={styles.itemTimestamp}>{formattedDate}</Text>
-    </View>
+    <Link
+      href={{
+        pathname: "/history/[id]", // Esta es la ruta al *archivo* (app)/history/[id].tsx
+        params: { id: item.id }, // Estos son los parámetros dinámicos
+      }}
+      asChild
+    >
+      <TouchableOpacity style={styles.itemContainer}>
+        <Text style={styles.itemTitle}>{item.employeeId}</Text>
+        <Text style={styles.itemSubtitle}>Nombre: {item.employeeName}</Text>
+        <Text style={styles.itemTimestamp}>{formattedDate}</Text>
+      </TouchableOpacity>
+    </Link>
   );
 };
 
