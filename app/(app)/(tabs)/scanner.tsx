@@ -13,8 +13,6 @@ import { ScannerPermissionView } from "../../../components/scanner/ScannerPermis
 
 import * as notificationService from "../../../services/notificationService";
 
-import { Redirect } from "expo-router";
-
 export default function TabScannerScreen() {
   // Estado local de la UI
   const [scannedData, setScannedData] = useState<string | null>(null);
@@ -91,9 +89,9 @@ export default function TabScannerScreen() {
 
   // --- Render Logic ---
 
-  if (!isLoggedIn) {
-    return <Redirect href={"/(auth)/login"} />;
-  }
+  // if (!isLoggedIn) {
+  //   return <Redirect href={"/(auth)/login"} />;
+  // }
 
   if (permissionLoading) {
     return <ScannerLoadingView text="Solicitando permisos de cámara..." />;

@@ -1,14 +1,6 @@
+// (app)/(tabs)/history.tsx
+import { Button } from "@/components/atoms";
 import { useAuth } from "@/hooks/useAuth";
-import { Redirect } from "expo-router";
-import {
-  collection,
-  getDocs,
-  getFirestore,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
-import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,150 +9,179 @@ import {
   View,
 } from "react-native";
 
-interface AttendanceRecord {
-  id: string;
-  employeeId: string;
-  timestamp: any;
-  employeeName: string;
-  type?: "Entrada" | "Salida";
-}
+import {
+  AttendanceRecord,
+  useAttendanceHistory,
+} from "@/hooks/useAttendanceHistory";
+
+import { logoutUser } from "@/services/auth.service";
+import { Redirect } from "expo-router";
+
+/**
+ * Componente para renderizar cada item de la lista
+ */
+const AttendanceItem = ({ item }: { item: AttendanceRecord }) => {
+  // Formateo de Timestamp para legibilidad
+  const formattedDate = item.timestamp
+    ? new Date(item.timestamp.seconds * 1000).toLocaleString("es-MX")
+    : "Fecha no disponible";
+
+  return (
+    <View style={styles.itemContainer}>
+      <Text style={styles.itemTitle}>{item.employeeName}</Text>
+      <Text style={styles.itemSubtitle}>ID: {item.employeeId}</Text>
+
+      <Text style={styles.itemTimestamp}>{formattedDate}</Text>
+    </View>
+  );
+};
 
 export default function TabHistoryScreen() {
-  const { isLoggedIn, userId } = useAuth();
+  const { isLoggedIn } = useAuth();
 
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Usamos el hook para obtener los datos
+  const { attendanceList, isLoading, error } = useAttendanceHistory();
 
-  // -------------------------------------------------------------------
-  // Lógica de Obtención de Datos (Consulta Única y Directa)
-  // -------------------------------------------------------------------
-  useEffect(() => {
-    if (!isLoggedIn || !userId) {
-      setIsLoading(false);
-      return;
-    }
+  // Handler para cerrar sesión
+  const handleLogout = async () => {
+    await logoutUser();
+    // El listener onAuthStateChanged en tu useAuth se encargará de
+    // actualizar el estado de Redux y provocar la redirección.
+  };
 
-    const fetchHistory = async () => {
-      setIsLoading(true);
-      setError(null);
-      const db = getFirestore();
-
-      try {
-        const historyQuery = query(
-          collection(db, "attendance"),
-          where("userId", "==", userId),
-          orderBy("timestamp", "desc"),
-        );
-        const historySnapshot = await getDocs(historyQuery);
-
-        const historyData = historySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as AttendanceRecord[];
-
-        setAttendance(historyData);
-      } catch (e) {
-        console.error("Error al obtener historial:", e);
-        setError("Error al cargar el historial. Intenta de nuevo.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchHistory();
-  }, [isLoggedIn, userId]);
-  // -------------------------------------------------------------------
-
+  // Verifica si el usuario está autenticado
   if (!isLoggedIn) {
     return <Redirect href={"/(auth)/login"} />;
   }
 
+  // Estado de Carga
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text style={{ marginTop: 10 }}>Cargando historial...</Text>
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#111827" />
+        <Text style={styles.loadingText}>Cargando historial...</Text>
       </View>
     );
   }
 
+  // Estado de Error
   if (error) {
     return (
-      <View style={styles.container}>
-        <Text style={[styles.title, { color: "red" }]}>{error}</Text>
-        <Text style={styles.mock}>
-          Verifica la conexión o contacta a soporte.
-        </Text>
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>Error: {error.message}</Text>
       </View>
     );
   }
 
-  const renderItemCrudo = ({ item }: { item: AttendanceRecord }) => (
-    <View style={styles.itemContainer}>
-      <Text style={styles.itemText}>Nombre: **{item.employeeName}**</Text>
-      <Text style={styles.itemText}>Tipo: {item.type || "N/A"}</Text>
-      <Text style={styles.itemText}>
-        Fecha/Hora: {item.timestamp?.toDate().toLocaleString() || "Cargando..."}
-      </Text>
-      <View style={styles.separator} />
-    </View>
-  );
-
+  // Estado con Datos
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mi Historial de Asistencia</Text>
+      {/* Encabezado con título y botón de logout */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Historial de Asistencia</Text>
+      </View>
 
-      {attendance.length === 0 ? (
-        <Text style={styles.mock}>
-          No hay registros de asistencia para tu cuenta.
-        </Text>
-      ) : (
-        <FlatList
-          data={attendance}
-          renderItem={renderItemCrudo}
-          keyExtractor={(item) => item.id}
-          style={styles.list}
-          contentContainerStyle={{ paddingBottom: 20 }}
-        />
-      )}
+      {/*  FlatList para mostrar los registros */}
+      <FlatList
+        data={attendanceList}
+        renderItem={({ item }) => <AttendanceItem item={item} />}
+        keyExtractor={(item) => item.id}
+        style={styles.list}
+        ListEmptyComponent={
+          <View style={styles.centeredEmpty}>
+            <Text style={styles.emptyText}>
+              No hay registros de asistencia.
+            </Text>
+          </View>
+        }
+      />
+      <View style={styles.logout}>
+        <Button label="Cerrar Sesión" onPress={handleLogout} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 28,
     flex: 1,
-    paddingTop: 20,
+    backgroundColor: "#f9fafb",
+  },
+  centered: {
+    flex: 1,
     alignItems: "center",
-    justifyContent: "flex-start",
-    backgroundColor: "#fff",
+    justifyContent: "center",
+    backgroundColor: "#f9fafb",
+  },
+  centeredEmpty: {
+    marginTop: 50,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#52525b",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#71717a",
+  },
+  errorText: {
+    color: "#e11d48",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e4e4e7",
+    backgroundColor: "#E3A542",
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 20,
+    color: "#fff",
   },
   list: {
-    width: "100%",
-    paddingHorizontal: 20,
+    flex: 1,
   },
   itemContainer: {
-    paddingVertical: 10,
-    paddingHorizontal: 5,
+    backgroundColor: "#ffffff",
+    padding: 16,
+    marginVertical: 8,
+    marginHorizontal: 16,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  itemText: {
-    fontSize: 16,
-    lineHeight: 24,
+  itemTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#111827",
   },
-  separator: {
-    height: 1,
-    backgroundColor: "#eee",
-    marginVertical: 5,
+  itemSubtitle: {
+    fontSize: 14,
+    color: "#52525b",
+    marginTop: 4,
   },
-  mock: {
-    marginTop: 30,
-    color: "#666",
-    fontSize: 16,
+  itemTimestamp: {
+    fontSize: 12,
+    color: "#71717a",
+    marginTop: 8,
+    textAlign: "right",
+  },
+  logout: {
+    display: "flex",
+    width: "50%",
+    alignSelf: "flex-end",
+    margin: 16,
   },
 });
