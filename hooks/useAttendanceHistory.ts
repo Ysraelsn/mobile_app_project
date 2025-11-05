@@ -12,7 +12,7 @@ import { firebaseDB } from "../firebase/config";
 interface AttendanceDoc {
   employeeId: string;
   employeeName: string;
-  type: string;
+
   timestamp: Timestamp;
   userId: string;
 }
