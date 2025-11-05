@@ -26,11 +26,11 @@ export const useAttendance = () => {
       setError(null);
       setSuccessData(null);
 
-      if (!userId) {
-        setError(new Error("Acceso denegado. Se requiere autenticación."));
-        setIsLoading(false);
-        return;
-      }
+      // if (!userId) {
+      //   setError(new Error("Acceso denegado. Se requiere autenticación."));
+      //   setIsLoading(false);
+      //   return;
+      // }
 
       try {
         const employeeRef = doc(firebaseDB, "employees", employeeId);
