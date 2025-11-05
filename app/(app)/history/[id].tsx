@@ -1,63 +1,48 @@
-import { firebaseDB } from "@/firebase/config";
-import { Stack, useLocalSearchParams } from "expo-router";
-import { doc, getDoc, Timestamp } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useAttendanceRecord } from "@/hooks/useAttendanceRecord";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
+  Button,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
-// Definimos la estructura del documento de Firestore
-interface AttendanceDoc {
-  employeeId: string;
-  employeeName: string;
-  timestamp: Timestamp;
-  userId: string;
-}
-
 export default function AttendanceDetailScreen() {
   //  Usar useLocalSearchParams para obtener el 'id' de la URL
   const { id } = useLocalSearchParams();
   const recordId = Array.isArray(id) ? id[0] : id; // Asegurarnos que id es un string
+  const router = useRouter();
 
-  const [record, setRecord] = useState<AttendanceDoc | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { record, isLoading, isDeleting, error, deleteRecord } =
+    useAttendanceRecord(recordId);
 
-  useEffect(() => {
-    if (!recordId) {
-      setError("ID de registro no proporcionado.");
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchRecord = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        //  Hacer una consulta (getDoc) a Firestore con el ID
-        const docRef = doc(firebaseDB, "attendance", recordId);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setRecord(docSnap.data() as AttendanceDoc);
-        } else {
-          setError("No se encontró el registro.");
-        }
-      } catch (err) {
-        console.error("Error fetching document:", err);
-        setError("No se pudo cargar el registro.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRecord();
-  }, [recordId]); // El efecto se ejecuta si el 'recordId' cambia
+  const handleDelete = async () => {
+    Alert.alert(
+      "Confirmar eliminación",
+      "¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteRecord();
+              router.back();
+            } catch (err) {
+              Alert.alert("Error", (err as Error).message);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   // --- Lógica de Renderizado ---
 
@@ -105,6 +90,14 @@ export default function AttendanceDetailScreen() {
 
         <Text style={styles.title}>ID del Documento</Text>
         <Text style={styles.data}>{recordId}</Text>
+      </View>
+      <View style={styles.deleteButtonContainer}>
+        <Button
+          title={isDeleting ? "Eliminando..." : "Eliminar Registro"}
+          color="#e11d48"
+          onPress={handleDelete}
+          disabled={isDeleting}
+        />
       </View>
     </ScrollView>
   );
@@ -155,5 +148,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
     borderRadius: 8,
+  },
+  deleteButtonContainer: {
+    marginHorizontal: 16,
+    marginVertical: 10,
+    paddingBottom: 20,
   },
 });
