@@ -26,7 +26,7 @@ export const AttendanceItem = ({ item }: Props) => {
       <Text style={styles.itemTitle}>{item.employeeId}</Text>
 
       {/* Mostramos el nombre como info secundaria, que es más legible */}
-      <Text style={styles.itemSubtitle}>Nombre: {item.employeeName}</Text>
+      <Text style={styles.itemSubtitle}>{item.employeeName}</Text>
 
       {/* Fecha formateada */}
       <Text style={styles.itemTimestamp}>{formattedDate}</Text>
@@ -34,10 +34,9 @@ export const AttendanceItem = ({ item }: Props) => {
   );
 };
 
-// Movimos los estilos de 'history.tsx' aquí
 const styles = StyleSheet.create({
   itemContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#e3a542",
     padding: 16,
     marginVertical: 8,
     marginHorizontal: 16,
@@ -50,21 +49,23 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     // AC3: Estilo destacado
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#111827",
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#fff",
     fontFamily: "monospace", // (Opcional) Buena idea para IDs
   },
   itemSubtitle: {
-    fontSize: 14,
-    color: "#52525b",
+    fontSize: 16,
+    color: "#2f2f2f",
     marginTop: 4,
+    fontWeight: "600",
   },
   itemTimestamp: {
     // AC4: Estilo de fecha
-    fontSize: 12,
-    color: "#71717a",
+    fontSize: 14,
+    color: "#fcf6ec",
     marginTop: 8,
     textAlign: "right",
+    fontWeight: "600",
   },
 });
