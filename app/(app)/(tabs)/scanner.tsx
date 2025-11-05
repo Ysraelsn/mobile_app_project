@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/useAuth";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 
@@ -12,20 +13,21 @@ import { ScannerPermissionView } from "../../../components/scanner/ScannerPermis
 
 import * as notificationService from "../../../services/notificationService";
 
+import { Redirect } from "expo-router";
+
 export default function TabScannerScreen() {
   // Estado local de la UI
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [isScannerActive, setIsScannerActive] = useState(true);
   const isProcessingRef = useRef(false);
+  const { isLoggedIn } = useAuth();
 
-  // Lógica de permisos (del hook)
   const {
     permission,
     loading: permissionLoading,
     requestCameraPermission,
   } = useScannerPermissions();
 
-  // Lógica de negocio (del hook)
   const {
     registerAttendance,
     isLoading: isRegistering,
@@ -34,7 +36,6 @@ export default function TabScannerScreen() {
     reset: resetAttendanceState,
   } = useAttendance();
 
-  // Notificaciones push
   useEffect(() => {
     if (successData) {
       notificationService.schedulePushNotification(
@@ -45,7 +46,6 @@ export default function TabScannerScreen() {
     }
   }, [successData, resetAttendanceState]);
 
-  // Efecto para mostrar Alertas de error
   useEffect(() => {
     if (registrationError) {
       Alert.alert("Error", registrationError.message);
@@ -62,7 +62,6 @@ export default function TabScannerScreen() {
     setIsScannerActive(false);
     setScannedData(result.data);
 
-    // Muestra una Alerta de confirmación
     Alert.alert(
       "Confirmar asistencia",
       `¿Registrar asistencia para: ${result.data}?`,
@@ -70,7 +69,7 @@ export default function TabScannerScreen() {
         {
           text: "Cancelar",
           style: "cancel",
-          onPress: () => handleRescan(), // Llama a re-escanear
+          onPress: () => handleRescan(),
         },
         {
           text: "Registrar",
@@ -92,7 +91,10 @@ export default function TabScannerScreen() {
 
   // --- Render Logic ---
 
-  // 1. Vista de Carga (permisos o registro)
+  if (!isLoggedIn) {
+    return <Redirect href={"/(auth)/login"} />;
+  }
+
   if (permissionLoading) {
     return <ScannerLoadingView text="Solicitando permisos de cámara..." />;
   }
@@ -101,12 +103,10 @@ export default function TabScannerScreen() {
     return <ScannerLoadingView text="Registrando asistencia..." />;
   }
 
-  // 2. Vista de Permiso Denegado
   if (permission === "denied") {
     return <ScannerPermissionView onRetry={requestCameraPermission} />;
   }
 
-  // 3. Vista de Permiso Concedido: Muestra la cámara
   return (
     <ScannerCameraView
       isScannerActive={isScannerActive}
