@@ -13,6 +13,14 @@ export const AppLayout = () => {
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="history/[id]" // Esta es la ruta al archivo (app)/history/[id].tsx
+        options={{
+          headerShown: true,
+          title: "Detalle de Asistencia",
+          headerBackTitle: "Historial", // Para un botón "Atrás" más claro en iOS
+        }}
+      />
     </Stack>
   );
 };
