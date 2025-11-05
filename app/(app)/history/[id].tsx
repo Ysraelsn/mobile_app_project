@@ -1,5 +1,7 @@
 import { useAttendanceRecord } from "@/hooks/useAttendanceRecord";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { doc, getFirestore, Timestamp, updateDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -7,17 +9,78 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
 export default function AttendanceDetailScreen() {
-  //  Usar useLocalSearchParams para obtener el 'id' de la URL
+  //  Usar useLocalSearchParams para obtener el 'id' de la URL
   const { id } = useLocalSearchParams();
   const recordId = Array.isArray(id) ? id[0] : id; // Asegurarnos que id es un string
   const router = useRouter();
 
   const { record, isLoading, isDeleting, error, deleteRecord } =
-    useAttendanceRecord(recordId);
+    useAttendanceRecord(recordId) as any;
+
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [localEmployeeId, setLocalEmployeeId] = useState("");
+  const [localEmployeeName, setLocalEmployeeName] = useState("");
+  const [localTimestampString, setLocalTimestampString] = useState("");
+
+  useEffect(() => {
+    if (record) {
+      setLocalEmployeeId(record.employeeId || "");
+      setLocalEmployeeName(record.employeeName || "");
+
+      const date = record.timestamp
+        ? new Date(record.timestamp.seconds * 1000)
+        : new Date();
+      setLocalTimestampString(
+        date.toISOString().slice(0, 19).replace("T", " "),
+      );
+    }
+  }, [record]);
+
+  const handleUpdate = async () => {
+    if (!recordId || isUpdating) return;
+
+    if (!localEmployeeId || !localTimestampString || !localEmployeeName) {
+      Alert.alert("Error", "Los campos no pueden estar vacíos.");
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+
+      const parsedDate = new Date(localTimestampString.replace(" ", "T"));
+      if (isNaN(parsedDate.getTime())) {
+        throw new Error(
+          "Formato de fecha u hora inválido. Usa YYYY-MM-DD HH:MM:SS.",
+        );
+      }
+      const newTimestamp = Timestamp.fromDate(parsedDate);
+
+      const db = getFirestore();
+      const recordRef = doc(db, "attendance", recordId);
+
+      await updateDoc(recordRef, {
+        employeeId: localEmployeeId,
+        employeeName: localEmployeeName,
+        timestamp: newTimestamp,
+      });
+
+      Alert.alert("Éxito", "Registro actualizado correctamente.");
+      setIsEditing(false);
+    } catch (err) {
+      Alert.alert(
+        "Error",
+        "No se pudo guardar la actualización: " + (err as Error).message,
+      );
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleDelete = async () => {
     Alert.alert(
@@ -46,7 +109,7 @@ export default function AttendanceDetailScreen() {
 
   // --- Lógica de Renderizado ---
 
-  if (isLoading) {
+  if (isLoading || !record) {
     return <ActivityIndicator size="large" style={styles.centered} />;
   }
 
@@ -79,17 +142,68 @@ export default function AttendanceDetailScreen() {
       <Stack.Screen options={{ title: "Detalle de Asistencia" }} />
 
       <View style={styles.card}>
-        <Text style={styles.title}>Nombre de Empleado</Text>
-        <Text style={styles.data}>{record.employeeName}</Text>
+        {!isEditing ? (
+          <Button title="Editar Registro" onPress={() => setIsEditing(true)} />
+        ) : (
+          <Button
+            title="Cancelar Edición"
+            onPress={() => setIsEditing(false)}
+            color="#ffc107"
+          />
+        )}
 
-        <Text style={styles.title}>ID de Empleado</Text>
-        <Text style={styles.data}>{record.employeeId}</Text>
+        {isEditing ? (
+          <View>
+            <Text style={styles.title}>Nombre de Empleado</Text>
+            <TextInput
+              style={styles.inputEditable}
+              value={localEmployeeName}
+              onChangeText={setLocalEmployeeName}
+              placeholder="Nombre Completo"
+            />
 
-        <Text style={styles.title}>Fecha y Hora</Text>
-        <Text style={styles.data}>{formattedDate}</Text>
+            <Text style={styles.title}>ID de Empleado</Text>
+            <TextInput
+              style={styles.inputEditable}
+              value={localEmployeeId}
+              onChangeText={setLocalEmployeeId}
+              placeholder="ID Empleado (EMP00X)"
+            />
+
+            <Text style={styles.title}>Fecha y Hora (YYYY-MM-DD HH:MM:SS)</Text>
+            <TextInput
+              style={styles.inputEditable}
+              value={localTimestampString}
+              onChangeText={setLocalTimestampString}
+              placeholder="Ej: 2025-11-05 12:00:00"
+            />
+          </View>
+        ) : (
+          <View>
+            <Text style={styles.title}>Nombre de Empleado</Text>
+            <Text style={styles.data}>{record.employeeName}</Text>
+
+            <Text style={styles.title}>ID de Empleado</Text>
+            <Text style={styles.data}>{record.employeeId}</Text>
+
+            <Text style={styles.title}>Fecha y Hora</Text>
+            <Text style={styles.data}>{formattedDate}</Text>
+          </View>
+        )}
 
         <Text style={styles.title}>ID del Documento</Text>
         <Text style={styles.data}>{recordId}</Text>
+
+        {isEditing && (
+          <View style={styles.saveButtonContainer}>
+            <Button
+              title={isUpdating ? "Guardando..." : "Guardar Cambios"}
+              onPress={handleUpdate}
+              disabled={isUpdating}
+              color="#4CAF50"
+            />
+          </View>
+        )}
       </View>
       <View style={styles.deleteButtonContainer}>
         <Button
@@ -104,10 +218,7 @@ export default function AttendanceDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#e3a542",
-  },
+  container: { flex: 1, backgroundColor: "#f3f4f6" },
   centered: {
     flex: 1,
     justifyContent: "center",
@@ -126,8 +237,6 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 20,
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
@@ -149,9 +258,28 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb",
     borderRadius: 8,
   },
+  inputEditable: {
+    fontSize: 18,
+    color: "#000000",
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#3b82f6",
+    backgroundColor: "#e0f2fe",
+    borderRadius: 8,
+  },
+  inputStatic: {
+    fontSize: 18,
+    color: "#111827",
+    padding: 10,
+    backgroundColor: "#f9fafb",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+  },
   deleteButtonContainer: {
     marginHorizontal: 16,
     marginVertical: 10,
     paddingBottom: 20,
   },
+  saveButtonContainer: { marginTop: 20 },
 });
