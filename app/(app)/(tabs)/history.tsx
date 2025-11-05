@@ -13,6 +13,7 @@ import { useAttendanceHistory } from "@/hooks/useAttendanceHistory";
 
 import { AttendanceItem } from "@/components/attendance/AttendanceItem";
 import { logoutUser } from "@/services/auth.service";
+import { Redirect } from "expo-router";
 
 export default function TabHistoryScreen() {
   const { isLoggedIn } = useAuth();
@@ -28,9 +29,9 @@ export default function TabHistoryScreen() {
   };
 
   // Verifica si el usuario está autenticado
-  // if (!isLoggedIn) {
-  //   return <Redirect href={"/(auth)/login"} />;
-  // }
+  if (!isLoggedIn) {
+    return <Redirect href={"/(auth)/login"} />;
+  }
 
   // Estado de Carga
   if (isLoading) {
