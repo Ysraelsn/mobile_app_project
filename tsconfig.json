@@ -6,11 +6,13 @@
       "@/*": ["./*"]
     }
   },
+  "types": ["jest", "node", "expo"],
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    "jest.config.js"
+    "jest.config.js",
+    "**/*.test.ts"
   ]
 }
