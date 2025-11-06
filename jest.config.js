@@ -6,4 +6,7 @@ export default {
   transformIgnorePatterns: [
     "node_modules/(?!(jest-)?@?react-native|expo(nent)?|@expo(nent)?/.*|@react-native(-community)?/.*)",
   ],
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/$1",
+  },
 };
