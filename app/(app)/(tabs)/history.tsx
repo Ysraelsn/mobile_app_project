@@ -1,138 +1,146 @@
-// (app)/(tabs)/history.tsx
-import { Button } from "@/components/atoms";
+import { AttendanceItem } from "@/components/attendance/AttendanceItem";
+import { useAttendanceHistory } from "@/hooks/useAttendanceHistory";
 import { useAuth } from "@/hooks/useAuth";
+import { logoutUser } from "@/services/auth.service";
+import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
+  Button,
   FlatList,
+  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
-import { useAttendanceHistory } from "@/hooks/useAttendanceHistory";
-
-import { AttendanceItem } from "@/components/attendance/AttendanceItem";
-import { logoutUser } from "@/services/auth.service";
-import { Redirect } from "expo-router";
-
 export default function TabHistoryScreen() {
   const { isLoggedIn } = useAuth();
-
-  // Usamos el hook para obtener los datos
   const { attendanceList, isLoading, error } = useAttendanceHistory();
+  const router = useRouter();
 
-  // Handler para cerrar sesión
   const handleLogout = async () => {
     await logoutUser();
-    // El listener onAuthStateChanged en tu useAuth se encargará de
-    // actualizar el estado de Redux y provocar la redirección.
   };
 
-  // Verifica si el usuario está autenticado
-  if (!isLoggedIn) {
-    return <Redirect href={"/(auth)/login"} />;
-  }
+  // Renderizado condicional del CONTENIDO principal
+  const renderContent = () => {
+    if (!isLoggedIn) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <View style={styles.centeredContent}>
+            <Text style={styles.emptyText}>
+              Debes iniciar sesión para ver el historial.
+            </Text>
+            {/* Botón que lleva al modal de login de forma segura */}
+            <View style={{ marginTop: 20 }}>
+              <Button
+                title="Iniciar Sesión"
+                onPress={() => router.push("/(auth)/login")}
+                color={"#E3A542"}
+              />
+            </View>
+          </View>
+        </SafeAreaView>
+      );
+    }
 
-  // Estado de Carga
-  if (isLoading) {
+    if (isLoading) {
+      return (
+        <View style={styles.centeredContent}>
+          <ActivityIndicator size="large" color="#111827" />
+          <Text style={styles.loadingText}>Cargando historial...</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.centeredContent}>
+          <Text style={styles.errorText}>Error: {error.message}</Text>
+        </View>
+      );
+    }
+
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#111827" />
-        <Text style={styles.loadingText}>Cargando historial...</Text>
-      </View>
-    );
-  }
-
-  // Estado de Error
-  if (error) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Error: {error.message}</Text>
-      </View>
-    );
-  }
-
-  // Estado con Datos
-  return (
-    <View style={styles.container}>
-      {/* Encabezado con título y botón de logout */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Historial de Asistencia</Text>
-      </View>
-
-      {/*  FlatList para mostrar los registros */}
       <FlatList
         data={attendanceList}
         renderItem={({ item }) => <AttendanceItem item={item} />}
         keyExtractor={(item) => item.id}
         style={styles.list}
+        contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <View style={styles.centeredEmpty}>
-            <Text style={styles.emptyText}>
-              No hay registros de asistencia.
-            </Text>
+          <View style={styles.centeredContent}>
+            <Text style={styles.emptyText}>No hay registros.</Text>
           </View>
         }
       />
-      <View style={styles.logout}>
-        <Button label="Cerrar Sesión" onPress={handleLogout} />
+    );
+  };
+
+  // ESTRUCTURA BASE ESTABLE
+  // Siempre renderizamos el mismo contenedor externo.
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Historial</Text>
+
+          {/* Ajusté el botón para que quepa en el header */}
+          <View style={styles.logout}>
+            <Button title="Salir" onPress={handleLogout} color={"red"} />
+          </View>
+        </View>
+
+        {/* El contenido cambia, pero el contenedor padre es estable */}
+        <View style={styles.contentContainer}>{renderContent()}</View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 28,
+  safeArea: {
     flex: 1,
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#E3A542", // Color del header para el área segura superior
   },
-  centered: {
-    flex: 1,
-    alignItems: "center",
+  logout: {
+    width: "30%",
+    alignContent: "center",
     justifyContent: "center",
+  },
+  container: {
+    flex: 1,
     backgroundColor: "#f9fafb",
-  },
-  centeredEmpty: {
-    marginTop: 50,
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#52525b",
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#71717a",
-  },
-  errorText: {
-    color: "#e11d48",
-    fontSize: 16,
-    fontWeight: "600",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e4e4e7",
+    paddingHorizontal: 16,
+    paddingVertical: 24,
     backgroundColor: "#E3A542",
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#fff",
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  centeredContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
   },
   list: {
     flex: 1,
   },
-  logout: {
-    display: "flex",
-    width: "50%",
-    alignSelf: "flex-end",
-    margin: 16,
+  listContent: {
+    flexGrow: 1, // Asegura que el EmptyComponent se pueda centrar
   },
+  loadingText: { marginTop: 10, color: "#52525b" },
+  errorText: { color: "#e11d48", fontSize: 16, fontWeight: "600" },
+  emptyText: { fontSize: 16, color: "#71717a" },
 });
