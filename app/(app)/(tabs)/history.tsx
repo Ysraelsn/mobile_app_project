@@ -1,7 +1,6 @@
 import { AttendanceItem } from "@/components/attendance/AttendanceItem";
 import { useAttendanceHistory } from "@/hooks/useAttendanceHistory";
 import { useAuth } from "@/hooks/useAuth";
-import { logoutUser } from "@/services/auth.service";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
@@ -14,12 +13,17 @@ import {
 } from "react-native";
 
 export default function TabHistoryScreen() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, startLogout } = useAuth();
   const { attendanceList, isLoading, error } = useAttendanceHistory();
   const router = useRouter();
 
   const handleLogout = async () => {
-    await logoutUser();
+    await startLogout();
+    router.replace("/(app)/(tabs)/scanner");
+  };
+
+  const handleLoginPress = () => {
+    router.push("/(auth)/login");
   };
 
   // Renderizado condicional del CONTENIDO principal
@@ -35,7 +39,7 @@ export default function TabHistoryScreen() {
             <View style={{ marginTop: 20 }}>
               <Button
                 title="Iniciar Sesión"
-                onPress={() => router.push("/(auth)/login")}
+                onPress={handleLoginPress}
                 color={"#E3A542"}
               />
             </View>
@@ -85,10 +89,12 @@ export default function TabHistoryScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Historial</Text>
 
-          {/* Ajusté el botón para que quepa en el header */}
-          <View style={styles.logout}>
-            <Button title="Salir" onPress={handleLogout} color={"red"} />
-          </View>
+          {/* Boton de logout solo si está logueado */}
+          {isLoggedIn && (
+            <View style={styles.logout}>
+              <Button title="Salir" onPress={handleLogout} color={"red"} />
+            </View>
+          )}
         </View>
 
         {/* El contenido cambia, pero el contenedor padre es estable */}

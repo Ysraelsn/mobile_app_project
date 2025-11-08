@@ -1,5 +1,5 @@
 import { firebaseAuth } from "@/firebase/config";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 import { fetchUserData } from "@/services/auth.service";
 import { loginUser, logout, setAuth } from "@/store/auth";
@@ -45,6 +45,16 @@ export const useAuth = () => {
     return dispatch(loginUser({ email, password })).unwrap();
   };
 
+  const startLogout = async () => {
+    try {
+      await signOut(firebaseAuth);
+      dispatch(logout());
+      dispatch(clearUser());
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
+  };
+
   return {
     // Properties
     userId: authState.userId,
@@ -55,5 +65,6 @@ export const useAuth = () => {
     // Methods
     startCheckingAuth,
     startLogin,
+    startLogout,
   };
 };
